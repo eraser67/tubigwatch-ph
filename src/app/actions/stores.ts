@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { uploadPhoto } from '@/lib/dal/photos'
 import { validatePhotoFile } from '@/lib/validation/photo'
 import { StoreSubmitSchema } from '@/lib/validation/store'
+import { checkRateLimit } from '@/lib/rateLimit'
 
 export type ActionResult<T = void> =
   | { success: true; data: T }
@@ -33,6 +34,21 @@ interface SubmittedProductItem {
 export async function submitStoreAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string; duplicateWarnings: number }>> {
+  // Honeypot bot protection
+  const honeypot = formData.get('hp_field')
+  if (typeof honeypot === 'string' && honeypot.length > 0) {
+    return { success: false, error: 'Spam submission detected.' }
+  }
+
+  // Rate limiting (max 10 submissions per 15 minutes)
+  const rateLimit = await checkRateLimit('submit_store', 10, 15 * 60 * 1000)
+  if (!rateLimit.allowed) {
+    return {
+      success: false,
+      error: `Too many submissions. Please wait ${rateLimit.retryAfterSeconds} seconds before trying again.`,
+    }
+  }
+
   const raw = Object.fromEntries(formData)
   const parsed = StoreSubmitSchema.safeParse(raw)
 
@@ -168,13 +184,51 @@ export async function submitStoreAction(
 
 /**
  * Moderator Server Action — approve a store submission.
+ * Enforces separation of duties: contributors cannot approve their own submissions.
+ * Appends to immutable moderation audit trail.
  */
-export async function approveStoreAction(storeId: string): Promise<ActionResult> {
-  await requireModerator()
+export async function approveStoreAction(storeId: string, reason?: string): Promise<ActionResult> {
+  const user = await requireModerator()
+  const admin = createAdminClient()
 
   try {
+    // Check creator for self-approval protection
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: store } = await (admin.from('stores') as any)
+      .select('creator_id, listing_status')
+      .eq('id', storeId)
+      .single()
+
+    if (store && store.creator_id === user.id && user.role !== 'admin') {
+      return {
+        success: false,
+        error: 'Separation of duties: you cannot approve your own store submission.',
+      }
+    }
+
     await adminUpdateStore(storeId, { listing_status: 'approved' })
+
+    // Also approve associated pending listings for this store
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('store_product_listings') as any)
+      .update({ listing_status: 'approved' })
+      .eq('store_id', storeId)
+      .eq('listing_status', 'pending')
+
+    // Append to immutable audit log
+    const { recordModerationAction } = await import('@/lib/dal/moderation')
+    await recordModerationAction({
+      actor_id: user.id,
+      action: 'approve',
+      target_table: 'stores',
+      target_id: storeId,
+      previous_status: store?.listing_status ?? 'pending',
+      new_status: 'approved',
+      reason: reason || 'Store submission approved',
+    })
+
     revalidatePath('/admin/stores')
+    revalidatePath('/admin/audit')
     revalidatePath('/stores')
     revalidatePath('/map')
     return { success: true, data: undefined }
@@ -189,12 +243,33 @@ export async function approveStoreAction(storeId: string): Promise<ActionResult>
 /**
  * Moderator Server Action — reject a store submission.
  */
-export async function rejectStoreAction(storeId: string): Promise<ActionResult> {
-  await requireModerator()
+export async function rejectStoreAction(storeId: string, reason?: string): Promise<ActionResult> {
+  const user = await requireModerator()
+  const admin = createAdminClient()
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: store } = await (admin.from('stores') as any)
+      .select('listing_status')
+      .eq('id', storeId)
+      .single()
+
     await adminUpdateStore(storeId, { listing_status: 'rejected' })
+
+    // Append to immutable audit log
+    const { recordModerationAction } = await import('@/lib/dal/moderation')
+    await recordModerationAction({
+      actor_id: user.id,
+      action: 'reject',
+      target_table: 'stores',
+      target_id: storeId,
+      previous_status: store?.listing_status ?? 'pending',
+      new_status: 'rejected',
+      reason: reason || 'Store submission rejected',
+    })
+
     revalidatePath('/admin/stores')
+    revalidatePath('/admin/audit')
     return { success: true, data: undefined }
   } catch (err) {
     return {
@@ -207,12 +282,32 @@ export async function rejectStoreAction(storeId: string): Promise<ActionResult> 
 /**
  * Moderator Server Action — suspend a store.
  */
-export async function suspendStoreAction(storeId: string): Promise<ActionResult> {
-  await requireModerator()
+export async function suspendStoreAction(storeId: string, reason?: string): Promise<ActionResult> {
+  const user = await requireModerator()
+  const admin = createAdminClient()
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: store } = await (admin.from('stores') as any)
+      .select('listing_status')
+      .eq('id', storeId)
+      .single()
+
     await adminUpdateStore(storeId, { listing_status: 'suspended' })
+
+    const { recordModerationAction } = await import('@/lib/dal/moderation')
+    await recordModerationAction({
+      actor_id: user.id,
+      action: 'suspend',
+      target_table: 'stores',
+      target_id: storeId,
+      previous_status: store?.listing_status ?? 'approved',
+      new_status: 'suspended',
+      reason: reason || 'Store suspended by moderator',
+    })
+
     revalidatePath('/admin/stores')
+    revalidatePath('/admin/audit')
     revalidatePath('/stores')
     revalidatePath('/map')
     return { success: true, data: undefined }

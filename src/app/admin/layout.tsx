@@ -66,7 +66,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 const adminLinks = [
   { href: '/admin', icon: '📊', label: 'Dashboard' },
   { href: '/admin/stores', icon: '🏪', label: 'Stores' },
-  { href: '/admin/products', icon: '📦', label: 'Products' },
   { href: '/admin/reports', icon: '📋', label: 'Price Reports' },
+  { href: '/admin/inaccurate-reports', icon: '🚩', label: 'Inaccurate Reports' },
+  { href: '/admin/duplicates', icon: '🔀', label: 'Merge Duplicates' },
+  { href: '/admin/audit', icon: '📜', label: 'Audit Log' },
+  { href: '/admin/products', icon: '📦', label: 'Products' },
   { href: '/admin/photos', icon: '🖼️', label: 'Photos' },
 ]

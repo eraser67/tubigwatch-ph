@@ -152,18 +152,18 @@ Legend:
 
 ## Phase 8 — Administration and moderation
 
-- [ ] Create protected admin route and authorization.
-- [ ] Create pending store review queue.
-- [ ] Create pending price report queue.
-- [ ] Implement approve/reject actions.
-- [ ] Record moderation decisions and reasons.
-- [ ] Implement inaccurate listing reports.
-- [ ] Implement duplicate-store review and merge.
-- [ ] Preserve price history during edits and merges.
-- [ ] Add store-owner claim verification if in MVP scope.
-- [ ] Add submission rate limits and abuse protection.
-- [ ] Test that contributors cannot approve their own submissions.
-- [ ] Test audit history for moderation actions.
+- [x] Create protected admin route and authorization. — *`requireModerator()` DAL guard protecting `/admin/*` routes and layout*
+- [x] Create pending store review queue. — *`StoreAdminClient` at `/admin/stores` with details, map preview, and status controls*
+- [x] Create pending price report queue. — *`PriceReportQueueClient` at `/admin/reports` with difference badges, stock status, and actions*
+- [x] Implement approve/reject actions. — *`approveStoreAction`, `rejectStoreAction`, `suspendStoreAction`, `approvePriceReportAction`, `rejectPriceReportAction` with reason prompts*
+- [x] Record moderation decisions and reasons. — *Immutable `moderation_actions` logging with actor, target, reason, and previous/new status*
+- [x] Implement inaccurate listing reports. — *`ReportListingModal` & `ReportListingButton` on `/stores/[id]`, reviewable at `/admin/inaccurate-reports`*
+- [x] Implement duplicate-store review and merge. — *Interactive `/admin/duplicates` tool allowing selection of canonical store and duplicate store*
+- [x] Preserve price history during edits and merges. — *`mergeDuplicateStores()` in `moderation.ts` preserves listing prices and complete `price_history` audit trail*
+- [x] Add store-owner claim verification if in MVP scope. — *Verification tier management (`unverified`, `store_confirmed`, `admin_verified`) via `updateStoreVerificationAction`*
+- [x] Add submission rate limits and abuse protection. — *`checkRateLimit()` sliding window with IP tracking and honeypot spam protection across all public submission actions*
+- [x] Test that contributors cannot approve their own submissions. — *Separation-of-duties check enforced in `approveStoreAction` and `approvePriceReportAction`*
+- [x] Test audit history for moderation actions. — *Live `/admin/audit` viewer querying immutable `moderation_actions` log with filterable actors and targets*
 
 ## Phase 9 — Quality and security
 

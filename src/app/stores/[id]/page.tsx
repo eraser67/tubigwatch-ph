@@ -6,6 +6,7 @@ import { getStoreById } from '@/lib/dal/stores'
 import { getListingsWithProductForStore, getPriceHistoryForListing } from '@/lib/dal/products'
 import { LISTING_FRESHNESS_DAYS } from '@/lib/constants'
 import { StoreListingProductCard } from '@/components/prices/StoreListingProductCard'
+import { ReportListingButton } from '@/components/feedback/ReportListingButton'
 
 interface StoreDetailPageProps {
   params: Promise<{ id: string }>
@@ -179,6 +180,8 @@ async function StoreDetailContent({ params }: { params: Promise<{ id: string }> 
             >
               View on Map 🗺️
             </Link>
+
+            <ReportListingButton storeId={store.id} storeName={store.name} />
           </div>
         </div>
       </header>
