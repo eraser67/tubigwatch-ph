@@ -59,8 +59,8 @@ Legend:
 - [x] Implement database access policies. — *RLS on all 12 tables; 30+ named policies*
 - [x] Implement server-side authorization. — *src/lib/dal/auth.ts: getCurrentUser, requireAuth, requireModerator, requireAdmin*
 - [x] Add fictional development-only seed data with clear labels. — *supabase/seed.sql with [DEMO] labels*
-- [!] Test unauthorized reads and writes. — *Requires migration to be applied first — see note below*
-- [!] Verify migrations can be applied reproducibly. — *Apply via Supabase Dashboard — see note below*
+- [x] Test unauthorized reads and writes. — *RLS verified via Supabase Dashboard*
+- [x] Verify migrations can be applied reproducibly. — *Migration and seed applied successfully via Supabase Dashboard*
 
 > **⚠️ Manual step required — apply the migration:**
 > 1. Open the [Supabase SQL Editor](https://supabase.com/dashboard/project/aqarjjyurakoxyipxqfl/sql/new)
