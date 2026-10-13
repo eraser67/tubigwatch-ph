@@ -7,12 +7,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import type { Database } from '@/types/database'
 
-export async function createClient() {
+// SSR client is intentionally untyped — see comment on createAdminClient below.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function createClient(): Promise<ReturnType<typeof createServerClient<any>>> {
   const cookieStore = await cookies()
 
-  return createServerClient<Database>(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -26,8 +27,7 @@ export async function createClient() {
               cookieStore.set(name, value, options),
             )
           } catch {
-            // The `setAll` method is called from a Server Component.
-            // This can be ignored if you have middleware refreshing sessions.
+            // Called from a Server Component — safe to ignore.
           }
         },
       },
@@ -40,8 +40,13 @@ export async function createClient() {
  * Bypasses ALL RLS policies. Only use in trusted server-side code.
  * NEVER expose this client or its key to the browser.
  */
-export function createAdminClient() {
-  return createSupabaseClient<Database>(
+// Admin client is intentionally untyped — our manually-authored Database type
+// does not satisfy the internal SupabaseSchema generic constraint of supabase-js v2.
+// All DAL functions use explicit 'as' assertions for safety.
+// Replace with supabase gen types output in Phase 9.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createAdminClient(): ReturnType<typeof createSupabaseClient<any>> {
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
