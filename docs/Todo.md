@@ -29,18 +29,18 @@ Legend:
 
 ## Phase 1 — Repository and foundation
 
-- [ ] Inspect repository and current code before modifying it.
-- [ ] Record the current stack, folder structure, and existing deployment approach.
-- [ ] Create or refine the application structure.
-- [ ] Configure TypeScript and linting/formatting.
-- [ ] Add environment-variable validation.
-- [ ] Add `.env.example` with placeholder names only.
-- [ ] Create responsive site layout and navigation.
-- [ ] Add loading, empty, error, and not-found states.
-- [ ] Configure build, lint, and test scripts.
-- [ ] Document local setup.
-- [ ] Update README with project description and setup instructions.
-- [ ] Verify clean install and successful build.
+- [x] Inspect repository and current code before modifying it. — *Repo had only README.md and docs/*
+- [x] Record the current stack, folder structure, and existing deployment approach. — *No prior stack; fresh Next.js 16 scaffold*
+- [x] Create or refine the application structure. — *src/app, components/layout, components/feedback, lib/*
+- [x] Configure TypeScript and linting/formatting. — *tsconfig.json (scaffold), ESLint, Prettier (.prettierrc.json)*
+- [x] Add environment-variable validation. — *src/lib/env.ts (Zod)*
+- [x] Add `.env.example` with placeholder names only. — *.env.example created*
+- [x] Create responsive site layout and navigation. — *SiteHeader, NavLinks (client), SiteFooter with attribution*
+- [x] Add loading, empty, error, and not-found states. — *loading.tsx, not-found.tsx, global-error.tsx, LoadingSpinner, ErrorState, EmptyState*
+- [x] Configure build, lint, and test scripts. — *package.json: build, lint, format, format:check, test*
+- [x] Document local setup. — *README.md updated*
+- [x] Update README with project description and setup instructions. — *Full README with stack table, setup steps, all commands*
+- [x] Verify clean install and successful build. — *`npm run build` passes, all 6 routes static*
 
 ## Phase 2 — Database and access control
 
