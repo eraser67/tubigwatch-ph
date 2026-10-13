@@ -44,23 +44,30 @@ Legend:
 
 ## Phase 2 — Database and access control
 
-- [ ] Finalize normalized data model.
-- [ ] Create migrations for profiles and roles.
-- [ ] Create stores table.
-- [ ] Create product categories and products tables.
-- [ ] Create store-product listings table.
-- [ ] Create price reports and price history tables.
-- [ ] Create photo metadata tables or references.
-- [ ] Create content reports and moderation action tables.
-- [!] Create store_ownership_claims table — deferred to post-MVP (see §4.2 of Requirements).
-- [ ] Add foreign keys, indexes, constraints, and timestamps.
-- [ ] Define store listing, verification, and review statuses.
-- [ ] Configure authentication if required.
-- [ ] Implement database access policies.
-- [ ] Implement server-side authorization.
-- [ ] Add fictional development-only seed data with clear labels.
-- [ ] Test unauthorized reads and writes.
-- [ ] Verify migrations can be applied reproducibly.
+- [x] Finalize normalized data model. — *12 tables across stores, products, prices, photos, moderation*
+- [x] Create migrations for profiles and roles. — *profiles table + handle_new_user trigger + app_role enum*
+- [x] Create stores table. — *listing_status, verification_status, lat/lng, RLS*
+- [x] Create product categories and products tables. — *seeded with 4 initial categories (ADR-11)*
+- [x] Create store-product listings table. — *unique per store+product; tracks freshness*
+- [x] Create price reports and price history tables. — *reports queue + append-only history*
+- [x] Create photo metadata tables or references. — *store_photos + product_photos with storage_path*
+- [x] Create content reports and moderation action tables. — *content_reports + moderation_actions (audit trail)*
+- [x] Create store_ownership_claims table — deferred to post-MVP (see §4.2 of Requirements). — *Table created for schema stability; workflow post-MVP*
+- [x] Add foreign keys, indexes, constraints, and timestamps. — *set_updated_at triggers; trgm indexes for search*
+- [x] Define store listing, verification, and review statuses. — *listing_status + verification_status enums*
+- [x] Configure authentication if required. — *Supabase Auth + @supabase/ssr + proxy.ts session refresh*
+- [x] Implement database access policies. — *RLS on all 12 tables; 30+ named policies*
+- [x] Implement server-side authorization. — *src/lib/dal/auth.ts: getCurrentUser, requireAuth, requireModerator, requireAdmin*
+- [x] Add fictional development-only seed data with clear labels. — *supabase/seed.sql with [DEMO] labels*
+- [!] Test unauthorized reads and writes. — *Requires migration to be applied first — see note below*
+- [!] Verify migrations can be applied reproducibly. — *Apply via Supabase Dashboard — see note below*
+
+> **⚠️ Manual step required — apply the migration:**
+> 1. Open the [Supabase SQL Editor](https://supabase.com/dashboard/project/aqarjjyurakoxyipxqfl/sql/new)
+> 2. Paste and run [`supabase/migrations/20261014000001_initial_schema.sql`](supabase/migrations/20261014000001_initial_schema.sql)
+> 3. Optionally run [`supabase/seed.sql`](supabase/seed.sql) for dev seed data
+> 4. Mark the two `[!]` items above `[x]` once done
+
 
 ## Phase 3 — Store and product management
 
