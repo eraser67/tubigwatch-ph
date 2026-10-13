@@ -66,7 +66,7 @@ export default function PinMap({
   const [isLocating, setIsLocating] = useState(false)
   const [geoNotice, setGeoNotice] = useState<string | null>(null)
 
-  // Explicit geolocation
+  // Explicit geolocation with low-accuracy fallback
   const handleUseMyLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setGeoNotice('Geolocation is not supported by your browser.')
@@ -76,29 +76,49 @@ export default function PinMap({
     setIsLocating(true)
     setGeoNotice(null)
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setIsLocating(false)
-        const lat = Number(pos.coords.latitude.toFixed(6))
-        const lng = Number(pos.coords.longitude.toFixed(6))
-        onCoordinatesChange(lat, lng)
+    const onFound = (pos: GeolocationPosition) => {
+      setIsLocating(false)
+      const lat = Number(pos.coords.latitude.toFixed(6))
+      const lng = Number(pos.coords.longitude.toFixed(6))
+      onCoordinatesChange(lat, lng)
 
-        if (mapRef.current) {
-          mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1 })
-        }
-        if (markerRef.current) {
-          markerRef.current.setLatLng([lat, lng])
-        }
-      },
-      (err) => {
-        setIsLocating(false)
-        if (err.code === err.PERMISSION_DENIED) {
-          setGeoNotice('Location permission was denied. Tap or drag anywhere on the map to place the pin.')
-        } else {
-          setGeoNotice('Unable to fetch location. Please place the pin manually on the map.')
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
+      if (mapRef.current) {
+        mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1 })
+      }
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng])
+      }
+    }
+
+    const onFailed = (err: GeolocationPositionError) => {
+      if (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE) {
+        navigator.geolocation.getCurrentPosition(
+          onFound,
+          (fallbackErr) => {
+            setIsLocating(false)
+            if (fallbackErr.code === fallbackErr.PERMISSION_DENIED) {
+              setGeoNotice('Location permission was denied. Tap or drag anywhere on the map to place the pin.')
+            } else {
+              setGeoNotice('Unable to fetch location. Please place the pin manually on the map.')
+            }
+          },
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 },
+        )
+        return
+      }
+
+      setIsLocating(false)
+      if (err.code === err.PERMISSION_DENIED) {
+        setGeoNotice('Location permission was denied. Tap or drag anywhere on the map to place the pin.')
+      } else {
+        setGeoNotice('Unable to fetch location. Please place the pin manually on the map.')
+      }
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      onFound,
+      onFailed,
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     )
   }, [onCoordinatesChange])
 

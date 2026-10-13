@@ -113,43 +113,83 @@ export default function StoreMap({
     }
   }, [stores, initialCenter, initialZoom])
 
-  // Explicit user geolocation trigger
+  const onSelectStoreRef = useRef(onSelectStore)
+  useEffect(() => {
+    onSelectStoreRef.current = onSelectStore
+  }, [onSelectStore])
+
+  // Explicit user geolocation trigger with low-accuracy fallback for desktop PCs
   const handleLocateMe = useCallback(() => {
     if (!navigator.geolocation) {
       onLocationError('Geolocation is not supported by your browser.')
       return
     }
 
-    setIsLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setIsLocating(false)
-        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude]
-        onUserLocationChange(coords)
+    // If userLocation is already set, quickly fly to it
+    if (userLocation && mapRef.current) {
+      mapRef.current.flyTo(userLocation, 15, { animate: true, duration: 0.8 })
+    }
 
-        if (mapRef.current) {
-          mapRef.current.flyTo(coords, 15, { animate: true, duration: 1.2 })
-        }
-      },
-      (err) => {
-        setIsLocating(false)
-        let msg = 'Unable to retrieve your location.'
-        if (err.code === err.PERMISSION_DENIED) {
-          msg = 'Location permission was denied. You can continue browsing the map manually.'
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          msg = 'Location information is currently unavailable.'
-        } else if (err.code === err.TIMEOUT) {
-          msg = 'Location request timed out. Please try again.'
-        }
-        onLocationError(msg)
-      },
+    setIsLocating(true)
+
+    const onCoordsFound = (pos: GeolocationPosition) => {
+      setIsLocating(false)
+      const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+      onUserLocationChange(coords)
+
+      if (mapRef.current) {
+        mapRef.current.flyTo(coords, 15, { animate: true, duration: 1.2 })
+      }
+    }
+
+    const onCoordsFailed = (err: GeolocationPositionError) => {
+      // If high-accuracy GPS failed or timed out (common on desktop/laptops), fallback to network/IP geolocation
+      if (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE) {
+        navigator.geolocation.getCurrentPosition(
+          onCoordsFound,
+          (fallbackErr) => {
+            setIsLocating(false)
+            let msg = 'Unable to retrieve your location.'
+            if (fallbackErr.code === fallbackErr.PERMISSION_DENIED) {
+              msg = 'Location permission was denied. Please allow location access in your browser address bar.'
+            } else if (fallbackErr.code === fallbackErr.POSITION_UNAVAILABLE) {
+              msg = 'Location information is unavailable. Check that Windows Location Service is enabled.'
+            } else if (fallbackErr.code === fallbackErr.TIMEOUT) {
+              msg = 'Location request timed out. Please try again or search manually.'
+            }
+            onLocationError(msg)
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 120000,
+          },
+        )
+        return
+      }
+
+      setIsLocating(false)
+      let msg = 'Unable to retrieve your location.'
+      if (err.code === err.PERMISSION_DENIED) {
+        msg = 'Location permission was denied. Please allow location access in your browser address bar.'
+      } else if (err.code === err.POSITION_UNAVAILABLE) {
+        msg = 'Location information is unavailable. Check that location services are enabled.'
+      } else if (err.code === err.TIMEOUT) {
+        msg = 'Location request timed out. Please try again.'
+      }
+      onLocationError(msg)
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      onCoordsFound,
+      onCoordsFailed,
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 8000,
         maximumAge: 60000,
       },
     )
-  }, [onUserLocationChange, onLocationError])
+  }, [userLocation, onUserLocationChange, onLocationError])
 
   // Initialize Map
   useEffect(() => {
@@ -184,14 +224,15 @@ export default function StoreMap({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const originalTarget = (e as any).originalEvent?.target
       if (originalTarget && originalTarget.closest('.custom-store-pin')) return
-      onSelectStore(null)
+      onSelectStoreRef.current(null)
     })
 
     return () => {
       map.remove()
       mapRef.current = null
     }
-  }, [initialCenter, initialZoom, tileUrl, tileAttribution, onSelectStore])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tileUrl, tileAttribution])
 
   // Update store markers
   useEffect(() => {

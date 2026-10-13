@@ -290,14 +290,14 @@ export function MapContainer({
           <DynamicStoreMap
             stores={filteredStores}
             selectedStore={selectedStore}
-            onSelectStore={(store) => setSelectedStore(store)}
+            onSelectStore={setSelectedStore}
             initialCenter={initialCenter}
             initialZoom={initialZoom}
             tileUrl={tileUrl}
             tileAttribution={tileAttribution}
             userLocation={userLocation}
-            onUserLocationChange={(loc) => setUserLocation(loc)}
-            onLocationError={(msg) => setLocationNotice(msg)}
+            onUserLocationChange={setUserLocation}
+            onLocationError={setLocationNotice}
           />
 
           {/* Floating Store Preview Card on Map */}
