@@ -20,7 +20,8 @@ export async function generateMetadata({ params }: StoreDetailPageProps): Promis
   }
 }
 
-async function StoreDetailContent({ id }: { id: string }) {
+async function StoreDetailContent({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const store = await getStoreById(id)
 
   if (!store) {
@@ -352,12 +353,10 @@ function StoreDetailLoading() {
   )
 }
 
-export default async function StoreDetailPage({ params }: StoreDetailPageProps) {
-  const { id } = await params
-
+export default function StoreDetailPage({ params }: StoreDetailPageProps) {
   return (
     <Suspense fallback={<StoreDetailLoading />}>
-      <StoreDetailContent id={id} />
+      <StoreDetailContent params={params} />
     </Suspense>
   )
 }
