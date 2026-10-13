@@ -19,6 +19,10 @@ interface ProductRow {
   productId: string
   pricePhp: string
   stockStatus: string
+  customName?: string
+  customCapacityLiters?: string
+  customCategoryId?: string
+  customBrand?: string
 }
 
 interface ContributeFormProps {
@@ -26,7 +30,7 @@ interface ContributeFormProps {
   categories: CategoryDTO[]
 }
 
-export function ContributeForm({ products }: ContributeFormProps) {
+export function ContributeForm({ products, categories }: ContributeFormProps) {
   const [isPending, startTransition] = useTransition()
 
   // Step 1: Location & Pin State
@@ -190,11 +194,26 @@ export function ContributeForm({ products }: ContributeFormProps) {
     // Filter valid products
     const validProducts = productRows
       .filter((p) => p.productId)
-      .map((p) => ({
-        productId: p.productId,
-        currentPricePhp: p.pricePhp ? Number(p.pricePhp) : null,
-        stockStatus: p.stockStatus,
-      }))
+      .map((p) => {
+        if (p.productId === 'other') {
+          return {
+            productId: 'other',
+            isCustom: true,
+            customName: p.customName?.trim() || 'Custom Container',
+            customCapacityLiters: p.customCapacityLiters ? Number(p.customCapacityLiters) : null,
+            customCategoryId: p.customCategoryId || categories[0]?.id,
+            customBrand: p.customBrand?.trim() || null,
+            currentPricePhp: p.pricePhp ? Number(p.pricePhp) : null,
+            stockStatus: p.stockStatus,
+          }
+        }
+        return {
+          productId: p.productId,
+          isCustom: false,
+          currentPricePhp: p.pricePhp ? Number(p.pricePhp) : null,
+          stockStatus: p.stockStatus,
+        }
+      })
 
     if (validProducts.length > 0) {
       formData.append('products', JSON.stringify(validProducts))
@@ -820,7 +839,7 @@ export function ContributeForm({ products }: ContributeFormProps) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {productRows.map((row, index) => (
+          {productRows.map((row) => (
             <div
               key={row.id}
               style={{
@@ -841,7 +860,13 @@ export function ContributeForm({ products }: ContributeFormProps) {
                 </label>
                 <select
                   value={row.productId}
-                  onChange={(e) => handleUpdateProduct(row.id, 'productId', e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    handleUpdateProduct(row.id, 'productId', val)
+                    if (val === 'other' && !row.customCategoryId) {
+                      handleUpdateProduct(row.id, 'customCategoryId', categories[0]?.id || '')
+                    }
+                  }}
                   style={{
                     width: '100%',
                     padding: '0.45rem 0.65rem',
@@ -852,11 +877,16 @@ export function ContributeForm({ products }: ContributeFormProps) {
                     fontSize: '0.85rem',
                   }}
                 >
-                  {products.map((prod) => (
-                    <option key={prod.id} value={prod.id}>
-                      {prod.name} {prod.capacity_liters ? `(${prod.capacity_liters}L)` : ''}
-                    </option>
-                  ))}
+                  <optgroup label="Standard Catalog Products">
+                    {products.map((prod) => (
+                      <option key={prod.id} value={prod.id}>
+                        {prod.name} {prod.capacity_liters ? `(${prod.capacity_liters}L)` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Other / Custom">
+                    <option value="other">✨ Other (Specify Name & Liters)...</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -914,19 +944,134 @@ export function ContributeForm({ products }: ContributeFormProps) {
                 <button
                   type="button"
                   onClick={() => handleRemoveProduct(row.id)}
-                  aria-label={`Remove product row ${index + 1}`}
+                  title="Remove this product item"
                   style={{
-                    background: 'none',
-                    border: 'none',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
                     color: 'var(--color-danger)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.45rem 0.65rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
-                    fontSize: '1.25rem',
-                    padding: '0.4rem',
-                    lineHeight: 1,
+                    alignSelf: 'end',
                   }}
                 >
                   ×
                 </button>
+              )}
+
+              {/* Custom Product Specification (Name, Liters, Category, Brand) */}
+              {row.productId === 'other' && (
+                <div
+                  style={{
+                    gridColumn: '1 / -1',
+                    backgroundColor: 'rgba(37, 99, 235, 0.04)',
+                    border: '1px dashed var(--color-brand-600)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.85rem 1rem',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                    gap: '0.75rem',
+                    marginTop: '0.25rem',
+                  }}
+                >
+                  {/* Custom Product Name */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.25rem', color: 'var(--color-brand-600)' }}>
+                      Product Name <span style={{ color: 'var(--color-danger)' }}>*</span>:
+                    </label>
+                    <input
+                      type="text"
+                      value={row.customName ?? ''}
+                      onChange={(e) => handleUpdateProduct(row.id, 'customName', e.target.value)}
+                      placeholder="e.g. Slim Space-Saver Drum"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.45rem 0.65rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--surface)',
+                        color: 'var(--foreground)',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                  </div>
+
+                  {/* How Many Liters */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.25rem', color: 'var(--color-brand-600)' }}>
+                      How Many Liters <span style={{ color: 'var(--color-danger)' }}>*</span>:
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      value={row.customCapacityLiters ?? ''}
+                      onChange={(e) => handleUpdateProduct(row.id, 'customCapacityLiters', e.target.value)}
+                      placeholder="e.g. 50, 75, 120, 1000"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.45rem 0.65rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--surface)',
+                        color: 'var(--foreground)',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                      Category:
+                    </label>
+                    <select
+                      value={row.customCategoryId ?? (categories[0]?.id || '')}
+                      onChange={(e) => handleUpdateProduct(row.id, 'customCategoryId', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.45rem 0.65rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--surface)',
+                        color: 'var(--foreground)',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Brand */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                      Brand (Optional):
+                    </label>
+                    <input
+                      type="text"
+                      value={row.customBrand ?? ''}
+                      onChange={(e) => handleUpdateProduct(row.id, 'customBrand', e.target.value)}
+                      placeholder="e.g. Megabox, Orocan"
+                      style={{
+                        width: '100%',
+                        padding: '0.45rem 0.65rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--surface)',
+                        color: 'var(--foreground)',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
           ))}

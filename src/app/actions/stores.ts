@@ -17,6 +17,11 @@ interface SubmittedProductItem {
   productId: string
   currentPricePhp?: number | null
   stockStatus: string
+  isCustom?: boolean
+  customName?: string
+  customCapacityLiters?: number | null
+  customCategoryId?: string
+  customBrand?: string | null
 }
 
 /**
@@ -80,13 +85,51 @@ export async function submitStoreAction(
         if (Array.isArray(productsList) && productsList.length > 0) {
           const admin = createAdminClient()
           for (const item of productsList) {
-            if (!item.productId) continue
+            let targetProductId = item.productId
+
+            // If user specified 'other' / custom product, find or create it in products catalog
+            if (item.productId === 'other' || item.isCustom) {
+              const customName = (item.customName || 'Custom Container').trim()
+              const customCategory = item.customCategoryId
+
+              // Check if matching product already exists
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: existingProd } = await (admin.from('products') as any)
+                .select('id')
+                .eq('name', customName)
+                .eq('category_id', customCategory)
+                .maybeSingle()
+
+              if (existingProd) {
+                targetProductId = existingProd.id
+              } else {
+                // Insert new custom product into catalog
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data: newProd, error: insertProdErr } = await (admin.from('products') as any)
+                  .insert({
+                    name: customName,
+                    category_id: customCategory,
+                    capacity_liters: item.customCapacityLiters ? Number(item.customCapacityLiters) : null,
+                    brand: item.customBrand ? item.customBrand.trim() : null,
+                  })
+                  .select('id')
+                  .single()
+
+                if (!insertProdErr && newProd) {
+                  targetProductId = newProd.id
+                } else if (insertProdErr) {
+                  console.error('Failed to create custom product:', insertProdErr)
+                }
+              }
+            }
+
+            if (!targetProductId || targetProductId === 'other') continue
 
             // Insert pending listing
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (admin.from('store_product_listings') as any).insert({
               store_id: id,
-              product_id: item.productId,
+              product_id: targetProductId,
               current_price_php: item.currentPricePhp ?? null,
               stock_status: item.stockStatus || 'unknown',
               listing_status: 'pending',
@@ -98,7 +141,7 @@ export async function submitStoreAction(
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               await (admin.from('price_reports') as any).insert({
                 store_id: id,
-                product_id: item.productId,
+                product_id: targetProductId,
                 reported_price_php: item.currentPricePhp,
                 stock_status: item.stockStatus || 'unknown',
                 report_source: user ? 'user' : 'anonymous',
