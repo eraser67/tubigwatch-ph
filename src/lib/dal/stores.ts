@@ -48,13 +48,17 @@ export type StoreMapDTO = StoreDTO & {
   }>
 }
 
-/** Returns all approved stores — public, cached per request. */
+/** Returns all approved stores — public, cached per request. Only returns stores with approved products. */
 export const getApprovedStores = cache(async (): Promise<StoreDTO[]> => {
   const supabase = createPublicClient()
   const { data, error } = await supabase
     .from('stores')
-    .select(STORE_COLUMNS)
+    .select(`
+      ${STORE_COLUMNS},
+      store_product_listings!inner(id)
+    `)
     .eq('listing_status', 'approved')
+    .eq('store_product_listings.listing_status', 'approved')
     .not('name', 'like', '[DEMO]%')
     .not('name', 'like', 'Test%')
     .neq('municipality', 'Placeholder Municipality')
@@ -64,7 +68,7 @@ export const getApprovedStores = cache(async (): Promise<StoreDTO[]> => {
   return (data ?? []) as StoreDTO[]
 })
 
-/** Returns all approved stores with their active product listings for the map view. */
+/** Returns all approved stores with their active product listings for the map view. Only returns stores with active products. */
 export const getApprovedStoresForMap = cache(async (): Promise<StoreMapDTO[]> => {
   const supabase = createPublicClient()
   const { data, error } = await supabase
@@ -127,7 +131,7 @@ export const getApprovedStoresForMap = cache(async (): Promise<StoreMapDTO[]> =>
       })),
   }))
 
-  return mapped as StoreMapDTO[]
+  return (mapped as StoreMapDTO[]).filter((store) => store.listings.length > 0)
 })
 
 /** Returns a single approved store by ID — public. */
