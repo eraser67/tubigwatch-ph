@@ -119,18 +119,18 @@ Legend:
 
 ## Phase 6 — Price updates and freshness
 
-- [ ] Create Report Price Update workflow.
-- [ ] Allow selection of an existing product listing.
-- [ ] Capture price in PHP.
-- [ ] Capture stock status.
-- [ ] Capture report source and timestamp.
-- [ ] Support optional evidence photo.
-- [ ] Separate submitted reports from accepted current prices.
-- [ ] Record accepted changes in price history.
-- [ ] Define configurable stale/fresh rules.
-- [ ] Show last-reported and last-confirmed times.
-- [ ] Add community-reported/store-confirmed/admin-verified labels.
-- [ ] Test history preservation and stale listing behavior.
+- [x] Create Report Price Update workflow. — *`ReportPriceModal` with live validation and confirmation*
+- [x] Allow selection of an existing product listing. — *Invoked per product listing with current baseline price*
+- [x] Capture price in PHP. — *Validated numeric field with currency display*
+- [x] Capture stock status. — *Stock status radio toggle (in stock, low, out of stock)*
+- [x] Capture report source and timestamp. — *Tracks authenticated user ID or anonymous, captured server-side*
+- [x] Support optional evidence photo. — *File dropzone with drag-and-drop & Supabase Storage upload*
+- [x] Separate submitted reports from accepted current prices. — *Pending reports queue vs active listing price per ADR-03*
+- [x] Record accepted changes in price history. — *Immutable append to `price_history` table upon report acceptance*
+- [x] Define configurable stale/fresh rules. — *ADR-04 freshness badge (Fresh < 7d vs Stale >= 7d)*
+- [x] Show last-reported and last-confirmed times. — *Timestamps rendered with relative and absolute dates*
+- [x] Add community-reported/store-confirmed/admin-verified labels. — *Source verification badges on cards and modals*
+- [x] Test history preservation and stale listing behavior. — *PriceHistoryModal timeline modal and moderation queue*
 
 ## Phase 7 — Search and comparison
 

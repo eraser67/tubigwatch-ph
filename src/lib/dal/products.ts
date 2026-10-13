@@ -203,6 +203,41 @@ export async function createStoreListing(input: StoreListingInput): Promise<{ id
   if (error) throw new Error(`Failed to create listing: ${error.message}`)
   return { id: (data as { id: string }).id }
 }
+export type PriceHistoryDTO = {
+  id: string
+  listing_id: string
+  accepted_price_php: number
+  stock_status: string
+  source: string
+  source_report_id: string | null
+  verified_by_id: string | null
+  effective_at: string
+  created_at: string
+}
+
+export type PendingPriceReportDTO = {
+  id: string
+  listing_id: string
+  reported_price_php: number
+  stock_status: string
+  source: string
+  evidence_photo_path: string | null
+  created_at: string
+  listing: {
+    id: string
+    current_price_php: number | null
+    store: {
+      id: string
+      name: string
+      municipality: string
+    } | null
+    product: {
+      id: string
+      name: string
+      capacity_liters: number | null
+    } | null
+  } | null
+}
 
 /**
  * Submit a community price report.
@@ -212,21 +247,23 @@ export async function submitPriceReport(
   input: PriceReportInput,
   reporterId: string | null,
   isTrusted: boolean,
+  evidencePhotoPath?: string | null,
 ): Promise<{ reportId: string; accepted: boolean }> {
   const supabase = await createClient()
   const reviewStatus = isTrusted ? 'approved' : 'pending'
 
-  const { data: report, error: reportError } = await supabase
-    .from('price_reports')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: report, error: reportError } = await (supabase.from('price_reports') as any)
     .insert({
       listing_id: input.listing_id,
       reported_price_php: input.reported_price_php,
       stock_status: input.stock_status,
       source: 'community_reported',
       reporter_id: reporterId,
+      evidence_photo_path: evidencePhotoPath ?? null,
       review_status: reviewStatus,
       ...(isTrusted ? { reviewed_at: new Date().toISOString() } : {}),
-    } as Parameters<ReturnType<typeof supabase.from>['insert']>[0])
+    })
     .select('id')
     .single()
 
@@ -236,27 +273,26 @@ export async function submitPriceReport(
     const admin = createAdminClient()
     const now = new Date().toISOString()
 
-    await admin
-      .from('store_product_listings')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('store_product_listings') as any)
       .update({
         current_price_php: input.reported_price_php,
         stock_status: input.stock_status,
         last_reported_at: now,
         last_confirmed_at: now,
         updated_at: now,
-      } as Parameters<ReturnType<typeof admin.from>['update']>[0])
+      })
       .eq('id', input.listing_id)
 
-    await admin
-      .from('price_history')
-      .insert({
-        listing_id: input.listing_id,
-        accepted_price_php: input.reported_price_php,
-        stock_status: input.stock_status,
-        source: 'community_reported',
-        source_report_id: (report as { id: string }).id,
-        verified_by_id: reporterId,
-      } as Parameters<ReturnType<typeof admin.from>['insert']>[0])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin.from('price_history') as any).insert({
+      listing_id: input.listing_id,
+      accepted_price_php: input.reported_price_php,
+      stock_status: input.stock_status,
+      source: 'community_reported',
+      source_report_id: (report as { id: string }).id,
+      verified_by_id: reporterId,
+    })
   }
 
   return { reportId: (report as { id: string }).id, accepted: isTrusted }
@@ -266,8 +302,8 @@ export async function submitPriceReport(
 export async function acceptPriceReport(reportId: string, moderatorId: string): Promise<void> {
   const admin = createAdminClient()
 
-  const { data: report, error: fetchError } = await admin
-    .from('price_reports')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: report, error: fetchError } = await (admin.from('price_reports') as any)
     .select('id,listing_id,reported_price_php,stock_status')
     .eq('id', reportId)
     .single()
@@ -282,30 +318,118 @@ export async function acceptPriceReport(reportId: string, moderatorId: string): 
   }
   const now = new Date().toISOString()
 
-  await admin
-    .from('price_reports')
-    .update({ review_status: 'approved', reviewer_id: moderatorId, reviewed_at: now } as Parameters<ReturnType<typeof admin.from>['update']>[0])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('price_reports') as any)
+    .update({ review_status: 'approved', reviewer_id: moderatorId, reviewed_at: now })
     .eq('id', reportId)
 
-  await admin
-    .from('store_product_listings')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('store_product_listings') as any)
     .update({
       current_price_php: r.reported_price_php,
       stock_status: r.stock_status,
       last_reported_at: now,
       last_confirmed_at: now,
       updated_at: now,
-    } as Parameters<ReturnType<typeof admin.from>['update']>[0])
+    })
     .eq('id', r.listing_id)
 
-  await admin
-    .from('price_history')
-    .insert({
-      listing_id: r.listing_id,
-      accepted_price_php: r.reported_price_php,
-      stock_status: r.stock_status,
-      source: 'community_reported',
-      source_report_id: reportId,
-      verified_by_id: moderatorId,
-    } as Parameters<ReturnType<typeof admin.from>['insert']>[0])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin.from('price_history') as any).insert({
+    listing_id: r.listing_id,
+    accepted_price_php: r.reported_price_php,
+    stock_status: r.stock_status,
+    source: 'community_reported',
+    source_report_id: reportId,
+    verified_by_id: moderatorId,
+  })
+}
+
+/** Moderator: reject a queued price report. */
+export async function rejectPriceReport(reportId: string, moderatorId: string): Promise<void> {
+  const admin = createAdminClient()
+  const now = new Date().toISOString()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin.from('price_reports') as any)
+    .update({ review_status: 'rejected', reviewer_id: moderatorId, reviewed_at: now })
+    .eq('id', reportId)
+
+  if (error) throw new Error(`Failed to reject price report: ${error.message}`)
+}
+
+/** Public: get price history for a specific listing ordered by latest first. */
+export const getPriceHistoryForListing = cache(
+  async (listingId: string): Promise<PriceHistoryDTO[]> => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('price_history')
+      .select('id,listing_id,accepted_price_php,stock_status,source,source_report_id,verified_by_id,effective_at,created_at')
+      .eq('listing_id', listingId)
+      .order('effective_at', { ascending: false })
+
+    if (error) throw new Error(`Failed to fetch price history: ${error.message}`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data ?? []).map((row: any) => ({
+      ...row,
+      accepted_price_php: Number(row.accepted_price_php),
+    })) as PriceHistoryDTO[]
+  },
+)
+
+/** Moderator: get all pending price reports awaiting review. */
+export async function getPendingPriceReports(): Promise<PendingPriceReportDTO[]> {
+  const admin = createAdminClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (admin.from('price_reports') as any)
+    .select(`
+      id,
+      listing_id,
+      reported_price_php,
+      stock_status,
+      source,
+      evidence_photo_path,
+      created_at,
+      store_product_listings (
+        id,
+        current_price_php,
+        stores (
+          id,
+          name,
+          municipality
+        ),
+        products (
+          id,
+          name,
+          capacity_liters
+        )
+      )
+    `)
+    .eq('review_status', 'pending')
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(`Failed to fetch pending price reports: ${error.message}`)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    listing_id: row.listing_id,
+    reported_price_php: Number(row.reported_price_php),
+    stock_status: row.stock_status,
+    source: row.source,
+    evidence_photo_path: row.evidence_photo_path,
+    created_at: row.created_at,
+    listing: row.store_product_listings
+      ? {
+          id: row.store_product_listings.id,
+          current_price_php:
+            row.store_product_listings.current_price_php != null
+              ? Number(row.store_product_listings.current_price_php)
+              : null,
+          store: row.store_product_listings.stores ?? null,
+          product: row.store_product_listings.products ?? null,
+        }
+      : null,
+  })) as PendingPriceReportDTO[]
 }

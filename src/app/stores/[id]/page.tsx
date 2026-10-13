@@ -3,8 +3,9 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getStoreById } from '@/lib/dal/stores'
-import { getListingsWithProductForStore } from '@/lib/dal/products'
+import { getListingsWithProductForStore, getPriceHistoryForListing } from '@/lib/dal/products'
 import { LISTING_FRESHNESS_DAYS } from '@/lib/constants'
+import { StoreListingProductCard } from '@/components/prices/StoreListingProductCard'
 
 interface StoreDetailPageProps {
   params: Promise<{ id: string }>
@@ -29,10 +30,12 @@ async function StoreDetailContent({ params }: { params: Promise<{ id: string }> 
   }
 
   const listings = await getListingsWithProductForStore(id)
+  const histories = await Promise.all(
+    listings.map((l) => getPriceHistoryForListing(l.id).catch(() => [])),
+  )
+
   const isVerified =
     store.verification_status === 'store_confirmed' || store.verification_status === 'admin_verified'
-
-  const now = new Date()
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '2rem 1rem' }}>
@@ -188,7 +191,7 @@ async function StoreDetailContent({ params }: { params: Promise<{ id: string }> 
               Available Water Storage Products ({listings.length})
             </h2>
             <p style={{ fontSize: '0.875rem', color: 'var(--muted)', margin: '0.25rem 0 0 0' }}>
-              Reported prices in Philippine Pesos (PHP). Freshness indicator highlights listings reported within {LISTING_FRESHNESS_DAYS} days.
+              Reported prices in Philippine Pesos (PHP). Listings older than {LISTING_FRESHNESS_DAYS} days are marked stale.
             </p>
           </div>
         </div>
@@ -209,104 +212,14 @@ async function StoreDetailContent({ params }: { params: Promise<{ id: string }> 
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {listings.map((listing) => {
-              const reportedDate = listing.last_reported_at ? new Date(listing.last_reported_at) : null
-              const ageDays = reportedDate
-                ? Math.floor((now.getTime() - reportedDate.getTime()) / (1000 * 60 * 60 * 24))
-                : 999
-              const isStale = ageDays > LISTING_FRESHNESS_DAYS
-
-              return (
-                <div
-                  key={listing.id}
-                  style={{
-                    backgroundColor: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-lg)',
-                    padding: '1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '1rem',
-                  }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '9999px',
-                          backgroundColor:
-                            listing.stock_status === 'available'
-                              ? 'rgba(22, 163, 74, 0.1)'
-                              : listing.stock_status === 'limited'
-                                ? 'rgba(217, 119, 6, 0.1)'
-                                : 'rgba(220, 38, 38, 0.1)',
-                          color:
-                            listing.stock_status === 'available'
-                              ? 'var(--color-success)'
-                              : listing.stock_status === 'limited'
-                                ? 'var(--color-warning)'
-                                : 'var(--color-danger)',
-                        }}
-                      >
-                        {listing.stock_status.toUpperCase()}
-                      </span>
-
-                      {/* Freshness Badge */}
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '9999px',
-                          backgroundColor: isStale ? 'rgba(156, 163, 175, 0.15)' : 'rgba(37, 99, 235, 0.1)',
-                          color: isStale ? 'var(--color-stale)' : 'var(--color-brand-600)',
-                        }}
-                      >
-                        {isStale ? `Stale (${ageDays}d ago)` : `Fresh (${ageDays}d ago)`}
-                      </span>
-                    </div>
-
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
-                      {listing.product?.name}
-                    </h3>
-
-                    {listing.product?.brand && (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 0.5rem 0' }}>
-                        Brand: {listing.product.brand}
-                      </p>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--muted)' }}>
-                      {listing.product?.capacity_liters && (
-                        <span>Capacity: <strong>{listing.product.capacity_liters} Liters</strong></span>
-                      )}
-                      {listing.product?.material && <span>• Material: {listing.product.material}</span>}
-                    </div>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>
-                        Reported Price
-                      </span>
-                      <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--color-brand-600)' }}>
-                        {listing.current_price_php != null ? `₱${listing.current_price_php.toFixed(2)}` : 'Inquire'}
-                      </span>
-                    </div>
-
-                    {isStale && (
-                      <p style={{ fontSize: '0.75rem', color: 'var(--color-warning)', margin: '0.4rem 0 0 0' }}>
-                        ⚠️ Reported over 7 days ago. Confirm price directly with store.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+            {listings.map((listing, idx) => (
+              <StoreListingProductCard
+                key={listing.id}
+                listing={listing}
+                history={histories[idx] ?? []}
+                freshnessDays={LISTING_FRESHNESS_DAYS}
+              />
+            ))}
           </div>
         )}
       </section>
