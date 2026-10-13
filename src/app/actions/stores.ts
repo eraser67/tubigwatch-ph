@@ -4,16 +4,26 @@ import { revalidatePath } from 'next/cache'
 import { getCurrentUser } from '@/lib/dal/auth'
 import { requireModerator } from '@/lib/dal/auth'
 import { createStore, adminUpdateStore, getNearbyStores } from '@/lib/dal/stores'
+import { createAdminClient } from '@/lib/supabase/server'
+import { uploadPhoto } from '@/lib/dal/photos'
+import { validatePhotoFile } from '@/lib/validation/photo'
 import { StoreSubmitSchema } from '@/lib/validation/store'
 
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string; fieldErrors?: Record<string, string[]> }
 
+interface SubmittedProductItem {
+  productId: string
+  currentPricePhp?: number | null
+  stockStatus: string
+}
+
 /**
  * Public Server Action — submit a new store.
  * Anonymous submissions are allowed (ADR-02).
  * All submissions go to pending for moderation.
+ * Supports optional storefront photo and product listings.
  */
 export async function submitStoreAction(
   formData: FormData,
@@ -29,6 +39,20 @@ export async function submitStoreAction(
     }
   }
 
+  // Validate photo file if provided
+  const photoEntry = formData.get('photo')
+  const photoFile = photoEntry instanceof File && photoEntry.size > 0 ? photoEntry : null
+  if (photoFile) {
+    const photoValidation = validatePhotoFile(photoFile)
+    if (!photoValidation.ok) {
+      return {
+        success: false,
+        error: photoValidation.error,
+        fieldErrors: { photo: [photoValidation.error] },
+      }
+    }
+  }
+
   const user = await getCurrentUser()
 
   // Duplicate check — non-blocking (warn, don't reject)
@@ -37,6 +61,58 @@ export async function submitStoreAction(
 
   try {
     const { id } = await createStore(parsed.data, user?.id ?? null)
+
+    // Upload storefront photo if attached
+    if (photoFile) {
+      try {
+        await uploadPhoto(photoFile, 'storefront', id, user?.id ?? null)
+      } catch (photoErr) {
+        console.error('Failed to upload storefront photo:', photoErr)
+        // Store creation succeeded, log photo error without failing entire submission
+      }
+    }
+
+    // Attach any products submitted with the store
+    const productsJson = formData.get('products')
+    if (typeof productsJson === 'string' && productsJson.trim()) {
+      try {
+        const productsList: SubmittedProductItem[] = JSON.parse(productsJson)
+        if (Array.isArray(productsList) && productsList.length > 0) {
+          const admin = createAdminClient()
+          for (const item of productsList) {
+            if (!item.productId) continue
+
+            // Insert pending listing
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (admin.from('store_product_listings') as any).insert({
+              store_id: id,
+              product_id: item.productId,
+              current_price_php: item.currentPricePhp ?? null,
+              stock_status: item.stockStatus || 'unknown',
+              listing_status: 'pending',
+              last_reported_at: new Date().toISOString(),
+            })
+
+            // Record initial price report
+            if (item.currentPricePhp != null && item.currentPricePhp > 0) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (admin.from('price_reports') as any).insert({
+                store_id: id,
+                product_id: item.productId,
+                reported_price_php: item.currentPricePhp,
+                stock_status: item.stockStatus || 'unknown',
+                report_source: user ? 'user' : 'anonymous',
+                reporter_id: user?.id ?? null,
+                report_status: 'pending',
+              })
+            }
+          }
+        }
+      } catch (parseErr) {
+        console.error('Failed to parse submitted products:', parseErr)
+      }
+    }
+
     revalidatePath('/admin/stores')
     return { success: true, data: { id, duplicateWarnings } }
   } catch (err) {

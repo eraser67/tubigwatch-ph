@@ -102,20 +102,20 @@ Legend:
 
 ## Phase 5 — Add a store using a pin
 
-- [ ] Create Add Store entry point.
-- [ ] Implement location search if supported by selected provider.
-- [ ] Allow map tapping to place a pin.
-- [ ] Allow pin movement/correction.
-- [ ] Capture and validate latitude/longitude.
-- [ ] Collect store name and address.
-- [ ] Collect optional contact number and opening hours.
-- [ ] Collect optional delivery details.
-- [ ] Collect optional storefront photo.
-- [ ] Allow one or more products to be added during submission.
-- [ ] Validate the form on client and server.
-- [ ] Save submission as Pending Review.
-- [ ] Display clear submission confirmation.
-- [ ] Test that pending stores remain hidden publicly.
+- [x] Create Add Store entry point. — *src/app/contribute/page.tsx*
+- [x] Implement location search if supported by selected provider. — *src/app/actions/geocoding.ts (Photon by Komoot)*
+- [x] Allow map tapping to place a pin. — *src/components/contribute/PinMap.tsx*
+- [x] Allow pin movement/correction. — *Draggable marker with dragend and tap-to-move*
+- [x] Capture and validate latitude/longitude. — *StoreSubmitSchema + real-time inputs*
+- [x] Collect store name and address. — *Store Name, Barangay, Municipality, Address Line*
+- [x] Collect optional contact number and opening hours. — *Contact Phone and Opening Hours inputs*
+- [x] Collect optional delivery details. — *Delivers checkbox + delivery_fee_php*
+- [x] Collect optional storefront photo. — *Client file validation (5 MB, JPEG/PNG/WebP) + uploadPhoto DAL*
+- [x] Allow one or more products to be added during submission. — *Multi-product rows linked to catalog*
+- [x] Validate the form on client and server. — *Client feedback + Server Action Zod validation*
+- [x] Save submission as Pending Review. — *Stores and listings default to listing_status = 'pending'*
+- [x] Display clear submission confirmation. — *Success screen with pending review details & duplicate notes*
+- [x] Test that pending stores remain hidden publicly. — *Verified via RLS & public DAL queries*
 
 ## Phase 6 — Price updates and freshness
 
