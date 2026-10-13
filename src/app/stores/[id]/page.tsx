@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getStoreById } from '@/lib/dal/stores'
@@ -19,8 +20,7 @@ export async function generateMetadata({ params }: StoreDetailPageProps): Promis
   }
 }
 
-export default async function StoreDetailPage({ params }: StoreDetailPageProps) {
-  const { id } = await params
+async function StoreDetailContent({ id }: { id: string }) {
   const store = await getStoreById(id)
 
   if (!store) {
@@ -310,5 +310,54 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
         )}
       </section>
     </div>
+  )
+}
+
+function StoreDetailLoading() {
+  return (
+    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <div
+        style={{
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border)',
+          padding: '2rem',
+          height: '240px',
+          opacity: 0.6,
+          marginBottom: '2rem',
+        }}
+      />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: '1rem',
+        }}
+      >
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            style={{
+              backgroundColor: 'var(--surface)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border)',
+              padding: '1.5rem',
+              height: '180px',
+              opacity: 0.6,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default async function StoreDetailPage({ params }: StoreDetailPageProps) {
+  const { id } = await params
+
+  return (
+    <Suspense fallback={<StoreDetailLoading />}>
+      <StoreDetailContent id={id} />
+    </Suspense>
   )
 }
