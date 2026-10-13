@@ -1,19 +1,34 @@
 import type { Metadata } from 'next'
-import { EmptyState } from '@/components/feedback/EmptyState'
+import { getApprovedStoresForMap } from '@/lib/dal/stores'
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '@/lib/constants'
+import { MapContainer } from '@/components/map/MapContainer'
 
-export const metadata: Metadata = { title: 'Map' }
+export const metadata: Metadata = {
+  title: 'Water Supply Map — TubigWatch PH',
+  description:
+    'Browse approved water storage containers, buckets, drums, and tanks from verified hardware stores across the municipality.',
+}
 
-export default function MapPage() {
+export default async function MapPage() {
+  const stores = await getApprovedStoresForMap()
+
+  const tileUrl =
+    process.env.NEXT_PUBLIC_MAP_TILE_PROVIDER ||
+    'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png'
+  const tileAttribution =
+    process.env.NEXT_PUBLIC_MAP_TILE_ATTRIBUTION ||
+    '© Stadia Maps © OpenStreetMap contributors'
+
   return (
-    <section aria-labelledby="map-heading" style={{ padding: '2rem 1rem' }}>
-      <h1 id="map-heading" style={{ fontWeight: 700, fontSize: '1.5rem', marginBottom: '1rem' }}>
-        Store Map
-      </h1>
-      <EmptyState
-        icon="🗺️"
-        title="Map coming in Phase 4"
-        message="The interactive Leaflet map with store markers will be built in Phase 4."
+    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+      <h1 className="sr-only">Interactive Water Supply Store Map</h1>
+      <MapContainer
+        initialStores={stores}
+        initialCenter={DEFAULT_MAP_CENTER}
+        initialZoom={DEFAULT_MAP_ZOOM}
+        tileUrl={tileUrl}
+        tileAttribution={tileAttribution}
       />
-    </section>
+    </div>
   )
 }

@@ -24,6 +24,10 @@ export const PHOTO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 /** Pilot municipality name — replace before Phase 10. (ADR-01) */
 export const PILOT_MUNICIPALITY = 'Placeholder Municipality'
 
+/** Default map center [latitude, longitude] and zoom level. */
+export const DEFAULT_MAP_CENTER: [number, number] = [14.5995, 120.9842]
+export const DEFAULT_MAP_ZOOM = 13
+
 /** Stock status labels. */
 export const STOCK_STATUS = {
   AVAILABLE: 'Available',

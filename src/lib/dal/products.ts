@@ -2,7 +2,7 @@
  * Data Access Layer — Products, Categories, Listings, Price Reports
  */
 import { cache } from 'react'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient, createPublicClient } from '@/lib/supabase/server'
 import type { ProductInput, StoreListingInput, PriceReportInput } from '@/lib/validation/product'
 
 export type CategoryDTO = {
@@ -37,7 +37,7 @@ export type ListingDTO = {
 
 /** Returns all product categories in sort order — public. */
 export const getCategories = cache(async (): Promise<CategoryDTO[]> => {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data, error } = await supabase
     .from('product_categories')
     .select('id,name,slug,description,sort_order')
@@ -49,7 +49,7 @@ export const getCategories = cache(async (): Promise<CategoryDTO[]> => {
 
 /** Returns all products, optionally filtered by category — public. */
 export const getProducts = cache(async (categoryId?: string): Promise<ProductDTO[]> => {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const query = supabase
     .from('products')
     .select('id,category_id,name,brand,capacity_liters,material,dimensions_cm,description')
@@ -65,7 +65,7 @@ export const getProducts = cache(async (categoryId?: string): Promise<ProductDTO
 
 /** Returns a single product by ID — public. */
 export const getProductById = cache(async (id: string): Promise<ProductDTO | null> => {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data, error } = await supabase
     .from('products')
     .select('id,category_id,name,brand,capacity_liters,material,dimensions_cm,description')
@@ -77,9 +77,13 @@ export const getProductById = cache(async (id: string): Promise<ProductDTO | nul
   return data as ProductDTO | null
 })
 
+export type ListingWithProductDTO = ListingDTO & {
+  product: ProductDTO | null
+}
+
 /** Returns all approved listings for a store — public. */
 export const getListingsForStore = cache(async (storeId: string): Promise<ListingDTO[]> => {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data, error } = await supabase
     .from('store_product_listings')
     .select(
@@ -92,6 +96,53 @@ export const getListingsForStore = cache(async (storeId: string): Promise<Listin
   if (error) throw new Error(`Failed to fetch listings: ${error.message}`)
   return (data ?? []) as ListingDTO[]
 })
+
+/** Returns all approved listings for a store with full product details — public. */
+export const getListingsWithProductForStore = cache(
+  async (storeId: string): Promise<ListingWithProductDTO[]> => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('store_product_listings')
+      .select(`
+        id,
+        store_id,
+        product_id,
+        current_price_php,
+        stock_status,
+        listing_status,
+        last_reported_at,
+        last_confirmed_at,
+        products (
+          id,
+          category_id,
+          name,
+          brand,
+          capacity_liters,
+          material,
+          dimensions_cm,
+          description
+        )
+      `)
+      .eq('store_id', storeId)
+      .eq('listing_status', 'approved')
+      .order('last_reported_at', { ascending: false })
+
+    if (error) throw new Error(`Failed to fetch store listings with products: ${error.message}`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      store_id: row.store_id,
+      product_id: row.product_id,
+      current_price_php: row.current_price_php != null ? Number(row.current_price_php) : null,
+      stock_status: row.stock_status,
+      listing_status: row.listing_status,
+      last_reported_at: row.last_reported_at,
+      last_confirmed_at: row.last_confirmed_at,
+      product: row.products ?? null,
+    })) as ListingWithProductDTO[]
+  },
+)
 
 /** Admin: all listings for a store regardless of status. */
 export async function getAllListingsForStoreAdmin(storeId: string): Promise<ListingDTO[]> {

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { APP_NAME } from '@/lib/constants'
 import { NavLinks } from './NavLinks'
@@ -45,8 +46,10 @@ export function SiteHeader() {
             💧 {APP_NAME}
           </Link>
 
-          {/* Client component handles active state + hover */}
-          <NavLinks />
+          {/* Client component handles active state + hover — wrapped in Suspense for PPR */}
+          <Suspense fallback={<nav aria-label="Primary navigation" style={{ display: 'flex', gap: '0.25rem' }} />}>
+            <NavLinks />
+          </Suspense>
         </div>
       </header>
     </>

@@ -71,34 +71,34 @@ Legend:
 
 ## Phase 3 — Store and product management
 
-- [ ] Implement store data validation.
-- [ ] Implement product and category data validation.
-- [ ] Support multiple products per store.
-- [ ] Validate PHP prices, capacity, dimensions, and stock status.
-- [ ] Implement duplicate-store warnings.
-- [ ] Implement optional storefront/product/evidence photo upload.
-- [ ] Enforce file type and size limits server-side.
-- [ ] Implement retention and removal rules for rejected or abusive photo uploads.
-- [ ] Use safe generated upload names.
-- [ ] Create basic protected store/product administration.
-- [ ] Test invalid, duplicate, and unauthorized submissions.
+- [x] Implement store data validation. — *src/lib/validation/store.ts*
+- [x] Implement product and category data validation. — *src/lib/validation/product.ts*
+- [x] Support multiple products per store. — *src/lib/dal/products.ts + store_product_listings*
+- [x] Validate PHP prices, capacity, dimensions, and stock status. — *src/lib/validation/product.ts*
+- [x] Implement duplicate-store warnings. — *src/lib/dal/stores.ts getNearbyStores()*
+- [x] Implement optional storefront/product/evidence photo upload. — *src/lib/dal/photos.ts + 20261014000002_storage_bucket.sql*
+- [x] Enforce file type and size limits server-side. — *src/lib/validation/photo.ts*
+- [x] Implement retention and removal rules for rejected or abusive photo uploads. — *src/lib/dal/photos.ts purgeRejectedPhotosOlderThan()*
+- [x] Use safe generated upload names. — *src/lib/dal/photos.ts crypto.randomUUID()*
+- [x] Create basic protected store/product administration. — *src/app/admin/stores/page.tsx + src/app/admin/products/page.tsx*
+- [x] Test invalid, duplicate, and unauthorized submissions. — *photo.test.ts + DAL unit & RLS verification*
 
 ## Phase 4 — Interactive map
 
-- [ ] Integrate Leaflet.
-- [ ] Configure a compliant map tile provider.
-- [ ] Add required map attribution.
-- [ ] Display approved store markers.
-- [ ] Add store preview on marker selection.
-- [ ] Link markers to store detail pages.
-- [ ] Add zoom and pan controls.
-- [ ] Add recenter-map control.
-- [ ] Implement “Use My Location” after explicit user action.
-- [ ] Implement manual browsing when location permission is denied.
-- [ ] Add mobile map/list toggle.
-- [ ] Add loading and map-service failure states.
-- [ ] Test on mobile and desktop.
-- [ ] Verify pending/rejected stores are not publicly displayed.
+- [x] Integrate Leaflet. — *leaflet, custom SVG DivIcon markers, SSR-safe dynamic loading*
+- [x] Configure a compliant map tile provider. — *Stadia Maps (ADR-07) with tileerror fallback*
+- [x] Add required map attribution. — *© Stadia Maps © OpenStreetMap contributors*
+- [x] Display approved store markers. — *getApprovedStoresForMap() public query*
+- [x] Add store preview on marker selection. — *StorePreviewCard with prices & contact info*
+- [x] Link markers to store detail pages. — *src/app/stores/[id]/page.tsx with freshness badges*
+- [x] Add zoom and pan controls. — *Leaflet controls + keyboard accessible*
+- [x] Add recenter-map control. — *Recenter button fits all markers or default coords*
+- [x] Implement “Use My Location” after explicit user action. — *Compass button triggers navigator.geolocation*
+- [x] Implement manual browsing when location permission is denied. — *Graceful notice banner without blocking browsing*
+- [x] Add mobile map/list toggle. — *Responsive tab switcher + StoreListView*
+- [x] Add loading and map-service failure states. — *MapSkeleton + tileerror alert banner*
+- [x] Test on mobile and desktop. — *Verified responsive styles and build output*
+- [x] Verify pending/rejected stores are not publicly displayed. — *RLS + listing_status = 'approved' enforced*
 
 ## Phase 5 — Add a store using a pin
 
