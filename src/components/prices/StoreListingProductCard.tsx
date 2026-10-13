@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { ListingWithProductDTO, PriceHistoryDTO } from '@/lib/dal/products'
 import { ReportPriceModal } from './ReportPriceModal'
 import { PriceHistoryModal } from './PriceHistoryModal'
@@ -170,6 +171,27 @@ export function StoreListingProductCard({
             >
               History ({history.length})
             </button>
+
+            {listing.product?.id && (
+              <Link
+                href={`/compare?product=${listing.product.id}`}
+                title="Compare this product across all stores"
+                style={{
+                  backgroundColor: 'var(--surface-elevated)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.825rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+              >
+                ⚖️ Compare
+              </Link>
+            )}
           </div>
         </div>
       </div>

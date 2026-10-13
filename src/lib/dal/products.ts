@@ -433,3 +433,131 @@ export async function getPendingPriceReports(): Promise<PendingPriceReportDTO[]>
       : null,
   })) as PendingPriceReportDTO[]
 }
+
+export type StoreInfoForComparison = {
+  id: string
+  name: string
+  barangay: string | null
+  municipality: string
+  latitude: number
+  longitude: number
+  delivers: boolean
+  delivery_fee_php: number | null
+  verification_status: string
+}
+
+export type ComparisonListingDTO = {
+  id: string
+  store_id: string
+  product_id: string
+  current_price_php: number
+  stock_status: string
+  listing_status: string
+  last_reported_at: string | null
+  last_confirmed_at: string | null
+  product: ProductDTO & {
+    category: CategoryDTO | null
+  }
+  store: StoreInfoForComparison
+}
+
+/**
+ * Returns all approved listings across all approved stores for price comparison and search.
+ * Public cached query.
+ */
+export const getListingsForComparison = cache(
+  async (): Promise<ComparisonListingDTO[]> => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('store_product_listings')
+      .select(`
+        id,
+        store_id,
+        product_id,
+        current_price_php,
+        stock_status,
+        listing_status,
+        last_reported_at,
+        last_confirmed_at,
+        stores!inner (
+          id,
+          name,
+          barangay,
+          municipality,
+          latitude,
+          longitude,
+          delivers,
+          delivery_fee_php,
+          verification_status,
+          listing_status
+        ),
+        products!inner (
+          id,
+          category_id,
+          name,
+          brand,
+          capacity_liters,
+          material,
+          dimensions_cm,
+          description,
+          product_categories (
+            id,
+            name,
+            slug,
+            description,
+            sort_order
+          )
+        )
+      `)
+      .eq('listing_status', 'approved')
+      .eq('stores.listing_status', 'approved')
+      .not('current_price_php', 'is', null)
+      .order('current_price_php', { ascending: true })
+
+    if (error) throw new Error(`Failed to fetch comparison listings: ${error.message}`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      store_id: row.store_id,
+      product_id: row.product_id,
+      current_price_php: Number(row.current_price_php),
+      stock_status: row.stock_status,
+      listing_status: row.listing_status,
+      last_reported_at: row.last_reported_at,
+      last_confirmed_at: row.last_confirmed_at,
+      product: {
+        id: row.products.id,
+        category_id: row.products.category_id,
+        name: row.products.name,
+        brand: row.products.brand,
+        capacity_liters:
+          row.products.capacity_liters != null ? Number(row.products.capacity_liters) : null,
+        material: row.products.material,
+        dimensions_cm: row.products.dimensions_cm,
+        description: row.products.description,
+        category: row.products.product_categories
+          ? {
+              id: row.products.product_categories.id,
+              name: row.products.product_categories.name,
+              slug: row.products.product_categories.slug,
+              description: row.products.product_categories.description,
+              sort_order: row.products.product_categories.sort_order,
+            }
+          : null,
+      },
+      store: {
+        id: row.stores.id,
+        name: row.stores.name,
+        barangay: row.stores.barangay,
+        municipality: row.stores.municipality,
+        latitude: row.stores.latitude,
+        longitude: row.stores.longitude,
+        delivers: row.stores.delivers,
+        delivery_fee_php:
+          row.stores.delivery_fee_php != null ? Number(row.stores.delivery_fee_php) : null,
+        verification_status: row.stores.verification_status,
+      },
+    }))
+  },
+)

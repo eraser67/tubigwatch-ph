@@ -134,21 +134,21 @@ Legend:
 
 ## Phase 7 — Search and comparison
 
-- [ ] Add product search.
-- [ ] Add store and location search.
-- [ ] Add category filter.
-- [ ] Add capacity and brand filters.
-- [ ] Add price range filter.
-- [ ] Add stock-status filter.
-- [ ] Add lowest-price sorting.
-- [ ] Add latest-confirmation sorting.
-- [ ] Add distance sorting when a valid user-selected location exists.
-- [ ] Define rules for equivalent-product matching.
-- [ ] Display comparable store prices.
-- [ ] Calculate potential savings correctly.
-- [ ] Clarify whether transport/delivery costs are included.
-- [ ] Add no-results and no-comparable-product states.
-- [ ] Test filters, sorting, and calculations.
+- [x] Add product search. — *Full text search matching product name, brand, and material across `/compare` and `/stores`*
+- [x] Add store and location search. — *Search by store name, barangay, and municipality in CompareView and StoreDirectoryClient*
+- [x] Add category filter. — *Category selector for buckets, containers, drums, and tanks*
+- [x] Add capacity and brand filters. — *Capacity in liters dropdown and dynamic brand filter*
+- [x] Add price range filter. — *Min and max PHP numerical range filtering*
+- [x] Add stock-status filter. — *Stock status filter (all, in stock only, limited)*
+- [x] Add lowest-price sorting. — *`price-asc` default sort with lowest price badge*
+- [x] Add latest-confirmation sorting. — *`confirmed-desc` sort by most recently confirmed price date*
+- [x] Add distance sorting when a valid user-selected location exists. — *Haversine distance calculation using geolocation*
+- [x] Define rules for equivalent-product matching. — *Exact product match vs Category + Capacity equivalent specification match*
+- [x] Display comparable store prices. — *Comparison cards showing prices across all carrying stores*
+- [x] Calculate potential savings correctly. — *Difference between highest and lowest store price with percentage calculation*
+- [x] Clarify whether transport/delivery costs are included. — *Pricing disclaimer banner on in-store retail prices vs delivery fees*
+- [x] Add no-results and no-comparable-product states. — *EmptyState with reset filters, and single-store comparison notice*
+- [x] Test filters, sorting, and calculations. — *Verified with unit logic and Next.js 16 production build*
 
 ## Phase 8 — Administration and moderation
 
