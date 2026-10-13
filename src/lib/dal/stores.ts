@@ -55,6 +55,9 @@ export const getApprovedStores = cache(async (): Promise<StoreDTO[]> => {
     .from('stores')
     .select(STORE_COLUMNS)
     .eq('listing_status', 'approved')
+    .not('name', 'like', '[DEMO]%')
+    .not('name', 'like', 'Test%')
+    .neq('municipality', 'Placeholder Municipality')
     .order('name')
 
   if (error) throw new Error(`Failed to fetch stores: ${error.message}`)
@@ -84,6 +87,9 @@ export const getApprovedStoresForMap = cache(async (): Promise<StoreMapDTO[]> =>
       )
     `)
     .eq('listing_status', 'approved')
+    .not('name', 'like', '[DEMO]%')
+    .not('name', 'like', 'Test%')
+    .neq('municipality', 'Placeholder Municipality')
     .order('name')
 
   if (error) throw new Error(`Failed to fetch stores for map: ${error.message}`)
@@ -158,6 +164,9 @@ export async function getAllStoresAdmin(): Promise<StoreDTO[]> {
   const { data, error } = await supabase
     .from('stores')
     .select(STORE_COLUMNS)
+    .not('name', 'like', '[DEMO]%')
+    .not('name', 'like', 'Test%')
+    .neq('municipality', 'Placeholder Municipality')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(`Failed to fetch all stores: ${error.message}`)
