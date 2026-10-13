@@ -22,7 +22,7 @@ export default function NotFound() {
       <span style={{ fontSize: '3rem' }} aria-hidden="true">💧</span>
       <h1 style={{ margin: 0, fontWeight: 700, fontSize: '1.5rem' }}>Page not found</h1>
       <p style={{ margin: 0, color: 'var(--muted)', maxWidth: '400px' }}>
-        The page you're looking for doesn't exist or has been moved.
+        The page you&apos;re looking for doesn&apos;t exist or has been moved.
       </p>
       <Link
         href="/"
