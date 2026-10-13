@@ -120,6 +120,9 @@ export default function StoreMap({
 
   // Explicit user geolocation trigger with low-accuracy fallback for desktop PCs
   const handleLocateMe = useCallback(() => {
+    // Deselect any active store so map view and cards do not focus on the store
+    onSelectStoreRef.current(null)
+
     if (!navigator.geolocation) {
       onLocationError('Geolocation is not supported by your browser.')
       return
@@ -127,7 +130,7 @@ export default function StoreMap({
 
     // If userLocation is already set, quickly fly to it
     if (userLocation && mapRef.current) {
-      mapRef.current.flyTo(userLocation, 15, { animate: true, duration: 0.8 })
+      mapRef.current.flyTo(userLocation, 16, { animate: true, duration: 0.8 })
     }
 
     setIsLocating(true)
@@ -138,7 +141,7 @@ export default function StoreMap({
       onUserLocationChange(coords)
 
       if (mapRef.current) {
-        mapRef.current.flyTo(coords, 15, { animate: true, duration: 1.2 })
+        mapRef.current.flyTo(coords, 16, { animate: true, duration: 1.2 })
       }
     }
 
@@ -254,14 +257,14 @@ export default function StoreMap({
       })
 
       marker.on('click', () => {
-        onSelectStore(store)
+        onSelectStoreRef.current(store)
         map.panTo([store.latitude, store.longitude], { animate: true })
       })
 
       marker.addTo(map)
       currentMarkers.set(store.id, marker)
     })
-  }, [stores, selectedStore, onSelectStore])
+  }, [stores, selectedStore])
 
   // Update user marker
   useEffect(() => {
@@ -315,8 +318,8 @@ export default function StoreMap({
         <button
           type="button"
           onClick={handleRecenter}
-          aria-label="Recenter map view"
-          title="Recenter map to all stores"
+          aria-label="Fit all stores in view"
+          title="Fit view to show all stores"
           style={{
             backgroundColor: 'var(--surface)',
             color: 'var(--foreground)',
@@ -334,7 +337,7 @@ export default function StoreMap({
           }}
         >
           <span>🎯</span>
-          <span>Recenter</span>
+          <span>Fit Stores</span>
         </button>
 
         {/* Locate Me Button */}

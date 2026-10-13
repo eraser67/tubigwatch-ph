@@ -217,23 +217,29 @@ export function MapContainer({
       </div>
 
       {/* Geolocation Notice Banner */}
+      {/* Geolocation Notice Banner */}
       {locationNotice && (
         <div
-          role="status"
+          role="alert"
           style={{
-            backgroundColor: '#eff6ff',
-            color: '#1d4ed8',
-            borderBottom: '1px solid #bfdbfe',
-            padding: '0.5rem 1rem',
-            fontSize: '0.825rem',
+            backgroundColor: '#fffbeb',
+            color: '#b45309',
+            borderBottom: '1px solid #fde68a',
+            padding: '0.65rem 1rem',
+            fontSize: '0.85rem',
+            fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '0.5rem',
-            zIndex: 10,
+            gap: '0.75rem',
+            zIndex: 20,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
           }}
         >
-          <span>ℹ️ {locationNotice}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+            <span>{locationNotice}</span>
+          </div>
           <button
             type="button"
             onClick={() => setLocationNotice(null)}
@@ -241,10 +247,12 @@ export function MapContainer({
             style={{
               background: 'none',
               border: 'none',
-              color: '#1d4ed8',
+              color: '#b45309',
               cursor: 'pointer',
               fontWeight: 'bold',
-              padding: 0,
+              fontSize: '1.1rem',
+              padding: '0.2rem 0.4rem',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
             ×
